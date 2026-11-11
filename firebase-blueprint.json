@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "dailyReports": {
+      "title": "Daily Reports",
+      "description": "Daily FIFO and stock reports indexed by date YYYY-MM-DD",
+      "properties": {
+        "reportDate": { "type": "string", "description": "Date string format YYYY-MM-DD" },
+        "headerInfo": { "type": "object", "description": "Report header info" },
+        "materials": { "type": "array", "description": "List of feed materials and kavlings" },
+        "updatedAt": { "type": "string", "description": "Timestamp of last update" }
+      },
+      "required": ["reportDate", "headerInfo", "materials"]
+    },
+    "settings": {
+      "title": "App Settings",
+      "description": "Global application settings such as active date",
+      "properties": {
+        "activeDate": { "type": "string", "description": "Currently selected report date YYYY-MM-DD" },
+        "presets": { "type": "array", "description": "Cached custom material presets" }
+      },
+      "required": ["activeDate"]
+    },
+    "users": {
+      "title": "User Accounts",
+      "description": "Master data login dan akun pengguna sistem gudang",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID" },
+        "username": { "type": "string", "description": "Alphanumeric unique username" },
+        "fullName": { "type": "string", "description": "Nama lengkap pengguna" },
+        "email": { "type": "string", "description": "Alamat email" },
+        "role": { "type": "string", "enum": ["admin", "operator", "supervisor", "viewer"], "description": "Hak akses sistem" },
+        "status": { "type": "string", "enum": ["active", "inactive"], "description": "Status keaktifan akun" },
+        "password": { "type": "string", "description": "Password kredensial" },
+        "department": { "type": "string", "description": "Departemen / Bagian kerja" },
+        "createdAt": { "type": "string", "description": "Waktu pendaftaran akun" },
+        "lastLoginAt": { "type": "string", "description": "Waktu terakhir login" }
+      },
+      "required": ["username", "fullName", "email", "role", "status"]
+    }
+  },
+  "firestore": {
+    "/dailyReports/{reportId}": {
+      "schema": { "$ref": "#/entities/dailyReports" },
+      "description": "Koleksi data laporan harian stock dan FIFO"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/settings" },
+      "description": "Pengaturan aplikasi dan preset"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/users" },
+      "description": "Master data login pengguna sistem"
+    }
+  }
+}

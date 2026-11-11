@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix: Remix: Laporan FIFO \u0026 Stock Fisik Pakan Ternak",
+  "description": "Aplikasi Laporan FIFO dan Stock Fisik Pakan Ternak (Satuan Dalam Karung) lengkap dengan manajemen kavling, umur produksi, dan rekonsiliasi stock.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
