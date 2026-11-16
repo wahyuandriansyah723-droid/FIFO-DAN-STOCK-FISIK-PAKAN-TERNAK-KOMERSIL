@@ -43,8 +43,6 @@ export const MisloadIncidentModal: React.FC<MisloadIncidentModalProps> = ({
   initialOperator,
   initialDate,
 }) => {
-  if (!isOpen) return null;
-
   const todayStr = new Date().toISOString().split('T')[0];
 
   const [incidentDate, setIncidentDate] = useState<string>(todayStr);
@@ -101,6 +99,8 @@ export const MisloadIncidentModal: React.FC<MisloadIncidentModalProps> = ({
       setStatus('investigasi');
     }
   }, [incidentToEdit, isOpen, materials, currentUserName, todayStr, initialCategory, initialOperator, initialDate]);
+
+  if (!isOpen) return null;
 
   const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
 

@@ -77,6 +77,20 @@ export function deleteMasterPresetByCode(code: string): FeedPreset[] {
   return updated;
 }
 
+export function addOrUpdateMasterPreset(preset: FeedPreset): FeedPreset[] {
+  const current = getMasterPresets();
+  const existingIdx = current.findIndex((p) => p.code === preset.code);
+  let updated: FeedPreset[];
+  if (existingIdx >= 0) {
+    updated = [...current];
+    updated[existingIdx] = preset;
+  } else {
+    updated = [preset, ...current];
+  }
+  saveMasterPresets(updated);
+  return updated;
+}
+
 export function resetMasterPresets(): FeedPreset[] {
   saveMasterPresets(FEED_PRESETS);
   return FEED_PRESETS;

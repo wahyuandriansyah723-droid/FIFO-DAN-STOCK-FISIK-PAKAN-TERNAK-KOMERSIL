@@ -785,6 +785,7 @@ export const LoadingOrderDashboardView: React.FC<LoadingOrderDashboardViewProps>
                   {filteredItems.map((item, idx) => {
                     const isUrutanSatu = item.loadingSequence === 1;
                     const isDamaged = item.statusType === 'hold_damaged';
+                    const pMat = materials.find((m) => m.id === item.materialId);
 
                     return (
                       <tr
@@ -809,15 +810,11 @@ export const LoadingOrderDashboardView: React.FC<LoadingOrderDashboardViewProps>
                           </div>
                           <div className="flex items-center gap-1.5 flex-wrap font-mono text-[10px] text-slate-500 mt-0.5">
                             <span className="font-semibold">{item.materialCode}</span>
-                            {(() => {
-                              const pMat = materials.find((m) => m.id === item.materialId);
-                              if (!pMat) return null;
-                              return (
-                                <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700">
-                                  Stok: <strong>{formatNumber(pMat.finalStockBags || 0)}</strong> (Masuk +{pMat.inboundTotal || 0} | Keluar -{pMat.outboundTotal || 0})
-                                </span>
-                              );
-                            })()}
+                            {pMat && (
+                              <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700">
+                                Stok: <strong>{formatNumber(pMat.finalStockBags || 0)}</strong> (Masuk +{pMat.inboundTotal || 0} | Keluar -{pMat.outboundTotal || 0})
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -921,6 +918,7 @@ export const LoadingOrderDashboardView: React.FC<LoadingOrderDashboardViewProps>
             const primaryItem = group.kavlings.find((k) => k.loadingSequence === 1);
             const queuedItems = group.kavlings.filter((k) => k.loadingSequence > 1 && k.statusType !== 'hold_damaged');
             const damagedItems = group.kavlings.filter((k) => k.statusType === 'hold_damaged');
+            const pMat = materials.find((m) => m.id === group.materialId);
 
             return (
               <div
@@ -928,31 +926,26 @@ export const LoadingOrderDashboardView: React.FC<LoadingOrderDashboardViewProps>
                 className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden"
               >
                 {/* Header Card */}
-                {(() => {
-                  const pMat = materials.find((m) => m.id === group.materialId);
-                  return (
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <h3 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                          <Package className="w-4 h-4 text-emerald-600" />
-                          <span>{group.materialName}</span>
-                        </h3>
-                        <div className="flex items-center gap-2 flex-wrap font-mono text-[10px] text-slate-500 mt-0.5">
-                          <span>{group.materialCode}</span>
-                          {pMat && (
-                            <span className="text-[9px] bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full font-sans">
-                              Stok Akhir: <strong>{formatNumber(pMat.finalStockBags || 0)}</strong> zak • Masuk: +{formatNumber(pMat.inboundTotal || 0)} • Keluar: -{formatNumber(pMat.outboundTotal || 0)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <span className="text-[11px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-2.5 py-0.5 rounded-full">
-                        {group.kavlings.length} Kavling
-                      </span>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <Package className="w-4 h-4 text-emerald-600" />
+                      <span>{group.materialName}</span>
+                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap font-mono text-[10px] text-slate-500 mt-0.5">
+                      <span>{group.materialCode}</span>
+                      {pMat && (
+                        <span className="text-[9px] bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full font-sans">
+                          Stok Akhir: <strong>{formatNumber(pMat.finalStockBags || 0)}</strong> zak • Masuk: +{formatNumber(pMat.inboundTotal || 0)} • Keluar: -{formatNumber(pMat.outboundTotal || 0)}
+                        </span>
+                      )}
                     </div>
-                  );
-                })()}
+                  </div>
+
+                  <span className="text-[11px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-2.5 py-0.5 rounded-full">
+                    {group.kavlings.length} Kavling
+                  </span>
+                </div>
 
                 {/* Body Roadmap */}
                 <div className="p-4 sm:p-5 space-y-4">

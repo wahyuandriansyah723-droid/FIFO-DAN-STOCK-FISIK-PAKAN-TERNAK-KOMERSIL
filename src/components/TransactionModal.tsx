@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Layers, Package, ListChecks, Zap } from 'lucide-react';
+import { X, Plus, Trash2, Save, Layers, Package, ListChecks, Zap, Search, Sparkles, Check, BookmarkPlus } from 'lucide-react';
 import { FeedMaterial, KavlingItem } from '../types';
 import {
   FeedPreset,
   getMasterPresets,
   deleteMasterPresetByCode,
+  addOrUpdateMasterPreset,
 } from '../data/feedPresets';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { deductFifoFromKavlings, restoreFifoToKavlings, sortKavlingsByFifoDate } from '../utils/fifoUtils';
@@ -29,6 +30,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [masterPresets, setMasterPresets] = useState<FeedPreset[]>([]);
   const [selectedPresetIndex, setSelectedPresetIndex] = useState<string>('');
+  const [masterSearch, setMasterSearch] = useState('');
+  const [showMasterCatalog, setShowMasterCatalog] = useState(false);
+  const [masterSavedNotice, setMasterSavedNotice] = useState(false);
 
   useEffect(() => {
     if (material) {
@@ -41,6 +45,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setSelectedPresetIndex('');
     }
   }, [material]);
+
+  const handleSaveCurrentToMasterPresets = () => {
+    if (!formData || !formData.materialName.trim() || !formData.materialCode.trim()) return;
+    const newPreset: FeedPreset = {
+      name: formData.materialName.trim().toUpperCase(),
+      code: formData.materialCode.trim(),
+      category: formData.category || 'pakan',
+      colorTheme: formData.colorTheme || 'blue',
+    };
+    const updated = addOrUpdateMasterPreset(newPreset);
+    setMasterPresets(updated);
+    setMasterSavedNotice(true);
+    setTimeout(() => setMasterSavedNotice(false), 2000);
+  };
 
   if (!isOpen || !formData) return null;
 
@@ -207,26 +225,36 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full p-6 space-y-6 animate-in fade-in zoom-in duration-150 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150 my-auto">
         
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-xl">
+        {/* Modal Header (Sticky Top) */}
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 p-4 sm:p-5 shrink-0 bg-white dark:bg-slate-900">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-xl shrink-0">
               <Package className="w-6 h-6" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                Edit Data Stock & Kavling Pakan
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+                Edit Data Stock &amp; Kavling Pakan
               </h2>
-              <p className="text-xs text-slate-500 font-mono">
+              <p className="text-xs text-slate-500 font-mono truncate">
                 {formData.materialName} ({formData.materialCode})
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="submit"
+              form="transaction-modal-form"
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+              title="Simpan Perubahan Data Stock & Kavling"
+            >
+              <Save className="w-4 h-4" />
+              <span>Simpan</span>
+            </button>
+
             {onDelete && (
               <button
                 type="button"
@@ -240,6 +268,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             )}
 
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
@@ -248,14 +277,37 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleFormSubmit} className="space-y-6">
+        <form id="transaction-modal-form" onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           
-          {/* Preset Selector */}
-          <div className="p-3 bg-amber-50/70 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-              <ListChecks className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span>Ganti / Samakan Dengan Master List Pakan JAPFA ({masterPresets.length} Jenis):</span>
-            </label>
+          {/* Master Data Pakan Integration Section */}
+          <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <label className="flex items-center gap-1.5 text-xs font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                <ListChecks className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Master Data Pakan JAPFA ({masterPresets.length} Jenis):</span>
+              </label>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMasterCatalog(!showMasterCatalog)}
+                  className="text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>{showMasterCatalog ? 'Tutup Cari Master' : 'Cari / Lihat Katalog Master'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveCurrentToMasterPresets}
+                  className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline flex items-center gap-1 cursor-pointer"
+                  title="Simpan nama dan kode pakan ini ke Master Data Pakan JAPFA"
+                >
+                  <BookmarkPlus className="w-3.5 h-3.5" />
+                  <span>{masterSavedNotice ? '✓ Tersimpan ke Master!' : '+ Simpan ke Master'}</span>
+                </button>
+              </div>
+            </div>
 
             <div className="flex items-center gap-2">
               <select
@@ -273,6 +325,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                               materialName: preset.name,
                               materialCode: preset.code,
                               colorTheme: preset.colorTheme || prev.colorTheme,
+                              category: preset.category || prev.category,
                             }
                           : null
                       );
@@ -284,7 +337,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <option value="">-- Pilih dari Master Pakan JAPFA ({masterPresets.length} Jenis) --</option>
                 {masterPresets.map((preset, idx) => (
                   <option key={preset.code} value={idx}>
-                    {preset.name} — ({preset.code})
+                    {preset.name} — ({preset.code}) [{preset.category === 'feed_add' ? 'Feed Add' : 'Pakan'}]
                   </option>
                 ))}
               </select>
@@ -301,6 +354,68 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </button>
               )}
             </div>
+
+            {/* Expandable Searchable Master Catalog */}
+            {showMasterCatalog && (
+              <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-amber-300 dark:border-amber-700 space-y-2 mt-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Ketik nama atau kode pakan master..."
+                    value={masterSearch}
+                    onChange={(e) => setMasterSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                  {masterPresets
+                    .filter(
+                      (p) =>
+                        !masterSearch.trim() ||
+                        p.name.toLowerCase().includes(masterSearch.toLowerCase()) ||
+                        p.code.includes(masterSearch)
+                    )
+                    .map((p, idx) => (
+                      <div
+                        key={p.code}
+                        onClick={() => {
+                          setFormData((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  materialName: p.name,
+                                  materialCode: p.code,
+                                  colorTheme: p.colorTheme || prev.colorTheme,
+                                  category: p.category || prev.category,
+                                }
+                              : null
+                          );
+                          setSelectedPresetIndex(String(idx));
+                          setShowMasterCatalog(false);
+                        }}
+                        className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs cursor-pointer transition-colors"
+                      >
+                        <div>
+                          <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <span>{p.name}</span>
+                            {p.category === 'feed_add' && (
+                              <span className="text-[8px] bg-purple-100 text-purple-700 px-1 py-0.2 rounded font-black">
+                                FEED ADD
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-500">{p.code}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-700 hover:underline">
+                          Terapkan →
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Main Info */}
@@ -466,7 +581,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <span>Rincian Stock Fisik Per Kavling</span>
               </h3>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleAddKavlingRow(false)}
@@ -486,6 +601,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 >
                   <Plus className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                   <span>+ Kavling Block Feed</span>
+                </button>
+
+                <button
+                  type="submit"
+                  className="flex items-center gap-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                  title="Simpan Perubahan Kavling"
+                >
+                  <Save className="w-3 h-3" />
+                  <span>Simpan</span>
                 </button>
               </div>
             </div>
@@ -585,40 +709,41 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
-            {onDelete ? (
-              <button
-                type="button"
-                onClick={() => setIsDeleteConfirmOpen(true)}
-                className="flex items-center gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-rose-200 dark:border-rose-900 cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Hapus Jenis Pakan Ini</span>
-              </button>
-            ) : (
-              <div />
-            )}
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>Simpan Perubahan</span>
-              </button>
-            </div>
-          </div>
-
         </form>
+
+        {/* Sticky Footer Buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/95 shrink-0">
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={() => setIsDeleteConfirmOpen(true)}
+              className="flex items-center gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-rose-200 dark:border-rose-900 cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Hapus Jenis Pakan Ini</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              form="transaction-modal-form"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>Simpan Perubahan</span>
+            </button>
+          </div>
+        </div>
 
         {/* Confirm Delete Modal */}
         {onDelete && (

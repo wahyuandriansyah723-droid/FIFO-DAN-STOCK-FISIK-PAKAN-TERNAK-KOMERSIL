@@ -32,9 +32,10 @@ import { LoginView } from './components/LoginView';
 import { MasterDataUsersModal } from './components/MasterDataUsersModal';
 import { MisloadDashboardView } from './components/MisloadDashboardView';
 import { LoadingOrderDashboardView } from './components/LoadingOrderDashboardView';
+import { EditKavlingModal } from './components/EditKavlingModal';
 import { calculateStockAkhir, calculateTotalPhysicalKavling, formatDateIndonesian } from './utils/fifoUtils';
 import { useUndoRedo } from './hooks/useUndoRedo';
-import { Undo2, Redo2 } from 'lucide-react';
+import { Undo2, Redo2, Save, Check } from 'lucide-react';
 import {
   db,
   REPORTS_COLLECTION,
@@ -53,7 +54,7 @@ import {
   seedInitialMisloadsToFirestore,
   signOutUser,
 } from './lib/firebase';
-import { setCachedPresets } from './data/feedPresets';
+import { setCachedPresets, FeedPreset } from './data/feedPresets';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 
 const REPORTS_STORAGE_KEY = 'japfa_pakan_fifo_all_reports_v3';
@@ -534,9 +535,44 @@ export default function App() {
   const [isCopyYesterdayModalOpen, setIsCopyYesterdayModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<FeedMaterial | null>(null);
+  const [editingKavlingTarget, setEditingKavlingTarget] = useState<{
+    materialId: string;
+    kavling: KavlingItem;
+  } | null>(null);
   const [dateToDeleteReport, setDateToDeleteReport] = useState<string | null>(null);
   const [cannotDeleteNotice, setCannotDeleteNotice] = useState<boolean>(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false);
+  const [isSavingReport, setIsSavingReport] = useState<boolean>(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [saveToastMessage, setSaveToastMessage] = useState<string | null>(null);
+
+  const handleManualSaveReport = async (): Promise<boolean> => {
+    setIsSavingReport(true);
+    try {
+      const [reportSaved, dateSaved] = await Promise.all([
+        saveReportToFirestore(activeDate, currentReport),
+        saveActiveDateToFirestore(activeDate),
+      ]);
+      const ok = reportSaved && dateSaved;
+      const nowTime = new Date().toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      if (ok) {
+        setLastSavedAt(nowTime);
+        setSaveToastMessage(`✓ Data Stock Barang & Kavling tersimpan ke Cloud (${nowTime})`);
+      } else {
+        setSaveToastMessage('⚠️ Gagal menyimpan ke Cloud. Periksa koneksi internet Anda.');
+      }
+      setTimeout(() => {
+        setSaveToastMessage(null);
+      }, 3200);
+      return ok;
+    } finally {
+      setIsSavingReport(false);
+    }
+  };
 
   // Copy stock carryover handler for next day
   const handleConfirmCopyYesterday = (newReportDate: string, newTransactionDate: string) => {
@@ -661,11 +697,99 @@ export default function App() {
     }
   };
 
-  const handleEditKavling = (materialId: string, _kavling: KavlingItem) => {
-    const target = materials.find((m) => m.id === materialId);
-    if (target) {
-      setEditingMaterial(target);
-    }
+  const handleEditKavling = (materialId: string, kavling: KavlingItem) => {
+    setEditingKavlingTarget({ materialId, kavling });
+  };
+
+  const handleSaveKavling = (
+    sourceMaterialId: string,
+    updatedKavling: KavlingItem,
+    targetMaterialId?: string,
+    targetMasterPreset?: FeedPreset
+  ) => {
+    setMaterials((prev) => {
+      if (targetMasterPreset) {
+        const existingTarget = prev.find((m) => m.materialCode === targetMasterPreset.code);
+        if (existingTarget) {
+          if (existingTarget.id === sourceMaterialId) {
+            return prev.map((m) =>
+              m.id === sourceMaterialId
+                ? {
+                    ...m,
+                    kavlings: m.kavlings.map((k) =>
+                      k.id === updatedKavling.id ? updatedKavling : k
+                    ),
+                  }
+                : m
+            );
+          }
+          return prev.map((m) => {
+            if (m.id === sourceMaterialId) {
+              return {
+                ...m,
+                kavlings: m.kavlings.filter((k) => k.id !== updatedKavling.id),
+              };
+            }
+            if (m.id === existingTarget.id) {
+              return {
+                ...m,
+                kavlings: [...m.kavlings, updatedKavling],
+              };
+            }
+            return m;
+          });
+        }
+
+        const newMaterial: FeedMaterial = {
+          id: `mat-${Date.now()}`,
+          materialName: targetMasterPreset.name,
+          materialCode: targetMasterPreset.code,
+          category: targetMasterPreset.category || 'pakan',
+          colorTheme: targetMasterPreset.colorTheme || 'blue',
+          weightPerBagKg: 50,
+          stockAwal: 0,
+          produksi: 0,
+          kirimanRetur: 0,
+          dimuat: 0,
+          bocorRepro: 0,
+          kavlings: [updatedKavling],
+        };
+
+        const cleaned = prev.map((m) =>
+          m.id === sourceMaterialId
+            ? { ...m, kavlings: m.kavlings.filter((k) => k.id !== updatedKavling.id) }
+            : m
+        );
+        return [...cleaned, newMaterial];
+      }
+
+      const finalTargetId = targetMaterialId || sourceMaterialId;
+
+      if (finalTargetId !== sourceMaterialId) {
+        return prev.map((m) => {
+          if (m.id === sourceMaterialId) {
+            const remaining = m.kavlings.filter((k) => k.id !== updatedKavling.id);
+            return { ...m, kavlings: remaining };
+          }
+          if (m.id === finalTargetId) {
+            return { ...m, kavlings: [...m.kavlings, updatedKavling] };
+          }
+          return m;
+        });
+      }
+
+      return prev.map((m) => {
+        if (m.id === sourceMaterialId) {
+          const updatedKavlings = m.kavlings.map((k) =>
+            k.id === updatedKavling.id ? updatedKavling : k
+          );
+          return { ...m, kavlings: updatedKavlings };
+        }
+        return m;
+      });
+    });
+
+    setEditingKavlingTarget(null);
   };
 
   const handleDeleteKavling = (materialId: string, kavlingId: string) => {
@@ -680,6 +804,13 @@ export default function App() {
         return m;
       })
     );
+    if (editingKavlingTarget?.kavling.id === kavlingId) {
+      setEditingKavlingTarget(null);
+    }
+  };
+
+  const handleReorderMaterials = (reordered: FeedMaterial[]) => {
+    setMaterials(reordered);
   };
 
   // Process Outbound FIFO Dispatch (Dimuat or Bocor/Repro)
@@ -840,6 +971,7 @@ export default function App() {
               onQuickAddKavling={handleQuickAddKavling}
               onEditKavling={handleEditKavling}
               onDeleteKavling={handleDeleteKavling}
+              onReorderMaterials={handleReorderMaterials}
               onOpenCopyYesterdayModal={() => setIsCopyYesterdayModalOpen(true)}
               availableDates={availableDates}
               onSelectDate={handleSelectDate}
@@ -851,22 +983,46 @@ export default function App() {
               onOpenLoginModal={() => setIsLoginModalOpen(true)}
               allReports={allReports}
               onGoToLoadingBoard={() => setViewMode('loading_board')}
+              onSaveReport={handleManualSaveReport}
+              isSavingReport={isSavingReport}
+              lastSavedAt={lastSavedAt}
             />
           )}
 
           {viewMode === 'fifo' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <h2 className="text-lg font-bold mb-1">Simulasi Outbound FIFO</h2>
-                <p className="text-xs text-slate-500 mb-4">
-                  Pilih pakan dan masukkan jumlah pengeluaran karung untuk menghitung urutan alokasi kavling tertua secara otomatis.
-                </p>
-                <button
-                  onClick={() => setIsFifoModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs cursor-pointer"
-                >
-                  Buka Generator Outbound FIFO
-                </button>
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold mb-1">Edit Kavling &amp; Simulasi Outbound FIFO</h2>
+                  <p className="text-xs text-slate-500">
+                    Pilih pakan dan masukkan jumlah pengeluaran karung untuk menghitung urutan alokasi kavling tertua secara otomatis, atau edit lot kavling langsung di tabel bawah.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsFifoModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs cursor-pointer shadow-xs"
+                  >
+                    Buka Generator Outbound FIFO
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleManualSaveReport}
+                    disabled={isSavingReport}
+                    className={`font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                      isSavingReport
+                        ? 'bg-emerald-400 text-white cursor-wait opacity-80'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
+                    title="Simpan seluruh perubahan Edit Kavling & Data Stok ke Cloud"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingReport ? 'Menyimpan...' : 'Simpan Perubahan Kavling & Stok'}</span>
+                  </button>
+                </div>
               </div>
 
               <ReportTableView
@@ -878,6 +1034,7 @@ export default function App() {
                 onQuickAddKavling={handleQuickAddKavling}
                 onEditKavling={handleEditKavling}
                 onDeleteKavling={handleDeleteKavling}
+                onReorderMaterials={handleReorderMaterials}
                 onOpenCopyYesterdayModal={() => setIsCopyYesterdayModalOpen(true)}
                 availableDates={availableDates}
                 onSelectDate={handleSelectDate}
@@ -889,6 +1046,9 @@ export default function App() {
                 onOpenLoginModal={() => setIsLoginModalOpen(true)}
                 allReports={allReports}
                 onGoToLoadingBoard={() => setViewMode('loading_board')}
+                onSaveReport={handleManualSaveReport}
+                isSavingReport={isSavingReport}
+                lastSavedAt={lastSavedAt}
               />
             </div>
           )}
@@ -931,6 +1091,14 @@ export default function App() {
 
       {/* Dedicated Clean Printable Sheet */}
       <PrintView materials={materials} headerInfo={headerInfo} />
+
+      {/* Non-Intrusive Cloud Save Toast Notification */}
+      {saveToastMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-emerald-700 text-white px-4 py-2.5 rounded-2xl shadow-xl border border-emerald-500/60 text-xs font-extrabold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-150 print:hidden">
+          <Check className="w-4 h-4 shrink-0" />
+          <span>{saveToastMessage}</span>
+        </div>
+      )}
 
       {/* Floating Undo / Redo Quick Widget (Visible on Screen) */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md text-white p-1.5 px-2.5 rounded-2xl border border-slate-700/80 shadow-2xl print:hidden">
@@ -1035,6 +1203,20 @@ export default function App() {
         currentUser={currentUser}
         onUpdateCurrentUser={handleUpdateCurrentUser}
       />
+
+      {/* Edit Kavling Lot Modal with Master Data Pakan Integration */}
+      {editingKavlingTarget && (
+        <EditKavlingModal
+          isOpen={!!editingKavlingTarget}
+          onClose={() => setEditingKavlingTarget(null)}
+          materialId={editingKavlingTarget.materialId}
+          kavling={editingKavlingTarget.kavling}
+          materials={materials}
+          onSaveKavling={handleSaveKavling}
+          onDeleteKavling={handleDeleteKavling}
+          reportDate={headerInfo.reportDate}
+        />
+      )}
 
       {/* Delete Date Report Modal */}
       <ConfirmDeleteModal

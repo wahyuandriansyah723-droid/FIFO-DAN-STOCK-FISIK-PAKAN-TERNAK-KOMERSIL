@@ -78,8 +78,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 /**
  * Save or update a single daily report in Firestore
  */
-export async function saveReportToFirestore(dateKey: string, report: DailyReport) {
-  if (!dateKey || !report) return;
+export async function saveReportToFirestore(dateKey: string, report: DailyReport): Promise<boolean> {
+  if (!dateKey || !report) return false;
   try {
     const docRef = doc(db, REPORTS_COLLECTION, dateKey);
     await setDoc(
@@ -92,8 +92,10 @@ export async function saveReportToFirestore(dateKey: string, report: DailyReport
       },
       { merge: true }
     );
+    return true;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `${REPORTS_COLLECTION}/${dateKey}`);
+    return false;
   }
 }
 
@@ -113,8 +115,8 @@ export async function deleteReportFromFirestore(dateKey: string) {
 /**
  * Save active report date setting in Firestore
  */
-export async function saveActiveDateToFirestore(activeDate: string) {
-  if (!activeDate) return;
+export async function saveActiveDateToFirestore(activeDate: string): Promise<boolean> {
+  if (!activeDate) return false;
   try {
     const docRef = doc(db, SETTINGS_COLLECTION, APP_SETTINGS_DOC);
     await setDoc(
@@ -125,8 +127,10 @@ export async function saveActiveDateToFirestore(activeDate: string) {
       },
       { merge: true }
     );
+    return true;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `${SETTINGS_COLLECTION}/${APP_SETTINGS_DOC}`);
+    return false;
   }
 }
 

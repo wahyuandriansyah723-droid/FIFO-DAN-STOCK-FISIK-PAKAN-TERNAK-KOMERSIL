@@ -855,6 +855,8 @@ export const MisloadDashboardView: React.FC<MisloadDashboardViewProps> = ({
                 <div className="h-52 flex items-end gap-3 sm:gap-6 pt-4 pb-2 px-2 overflow-x-auto">
                   {dateTrendStats.map((item) => {
                     const barHeightPct = Math.max(15, Math.round((item.bags / maxDailyBags) * 100));
+                    const incsOnDate = incidents.filter((i) => i.incidentDate === item.date);
+
                     return (
                       <div key={item.date} className="flex-1 min-w-[55px] flex flex-col items-center gap-1.5 group cursor-pointer">
                         {/* Tooltip & Value */}
@@ -880,50 +882,45 @@ export const MisloadDashboardView: React.FC<MisloadDashboardViewProps> = ({
                             {formatDateIndonesian(item.date, 'short')}
                           </span>
 
-                          {(() => {
-                            const incsOnDate = incidents.filter((i) => i.incidentDate === item.date);
-                            return (
-                              <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreateNew({ date: item.date });
+                              }}
+                              className="p-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950 dark:text-amber-300 transition-colors"
+                              title={`Simpan Kasus Baru pada ${formatDateIndonesian(item.date, 'short')}`}
+                            >
+                              <Plus className="w-2.5 h-2.5" />
+                            </button>
+                            {incsOnDate.length > 0 && (
+                              <>
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleCreateNew({ date: item.date });
+                                    handleEdit(incsOnDate[0]);
                                   }}
-                                  className="p-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950 dark:text-amber-300 transition-colors"
-                                  title={`Simpan Kasus Baru pada ${formatDateIndonesian(item.date, 'short')}`}
+                                  className="p-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-950 dark:text-blue-300 transition-colors"
+                                  title={`Edit Kasus pada ${formatDateIndonesian(item.date, 'short')}`}
                                 >
-                                  <Plus className="w-2.5 h-2.5" />
+                                  <Edit3 className="w-2.5 h-2.5" />
                                 </button>
-                                {incsOnDate.length > 0 && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEdit(incsOnDate[0]);
-                                      }}
-                                      className="p-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-950 dark:text-blue-300 transition-colors"
-                                      title={`Edit Kasus pada ${formatDateIndonesian(item.date, 'short')}`}
-                                    >
-                                      <Edit3 className="w-2.5 h-2.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDelete(incsOnDate[0]);
-                                      }}
-                                      className="p-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950 dark:text-rose-300 transition-colors"
-                                      title={`Hapus Kasus pada ${formatDateIndonesian(item.date, 'short')}`}
-                                    >
-                                      <Trash2 className="w-2.5 h-2.5" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })()}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(incsOnDate[0]);
+                                  }}
+                                  className="p-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950 dark:text-rose-300 transition-colors"
+                                  title={`Hapus Kasus pada ${formatDateIndonesian(item.date, 'short')}`}
+                                >
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1095,6 +1092,9 @@ export const MisloadDashboardView: React.FC<MisloadDashboardViewProps> = ({
                   const pct = totalAffectedBags > 0 ? Math.round((op.bags / totalAffectedBags) * 100) : 0;
                   const relativeBarPct = Math.max(15, Math.round((op.bags / maxOperatorBags) * 100));
                   const domCatInfo = CATEGORY_LABELS[op.dominantCategory];
+                  const opIncidents = incidents.filter(
+                    (i) => i.forkliftOperator?.trim().toLowerCase() === op.name.toLowerCase()
+                  );
 
                   return (
                     <div
@@ -1192,56 +1192,49 @@ export const MisloadDashboardView: React.FC<MisloadDashboardViewProps> = ({
                       </div>
 
                       {/* Action Bar Operator: Simpan, Edit, Hapus */}
-                      {(() => {
-                        const opIncidents = incidents.filter(
-                          (i) => i.forkliftOperator?.trim().toLowerCase() === op.name.toLowerCase()
-                        );
-                        return (
-                          <div className="pt-2.5 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => handleCreateNew({ operator: op.name })}
-                              className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[10px] flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
-                              title={`Simpan / Catat Kesalahan Muat Baru untuk ${op.name}`}
-                            >
-                              <Plus className="w-3 h-3 text-slate-950" />
-                              <span>+ Simpan Kasus</span>
-                            </button>
+                      <div className="pt-2.5 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleCreateNew({ operator: op.name })}
+                          className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[10px] flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                          title={`Simpan / Catat Kesalahan Muat Baru untuk ${op.name}`}
+                        >
+                          <Plus className="w-3 h-3 text-slate-950" />
+                          <span>+ Simpan Kasus</span>
+                        </button>
 
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                disabled={opIncidents.length === 0}
-                                onClick={() => opIncidents[0] && handleEdit(opIncidents[0])}
-                                className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors ${
-                                  opIncidents.length > 0
-                                    ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 cursor-pointer'
-                                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                                }`}
-                                title={`Edit Kasus Terakhir untuk ${op.name}`}
-                              >
-                                <Edit3 className="w-3 h-3" />
-                                <span>Edit</span>
-                              </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={opIncidents.length === 0}
+                            onClick={() => opIncidents[0] && handleEdit(opIncidents[0])}
+                            className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors ${
+                              opIncidents.length > 0
+                                ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 cursor-pointer'
+                                : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                            }`}
+                            title={`Edit Kasus Terakhir untuk ${op.name}`}
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Edit</span>
+                          </button>
 
-                              <button
-                                type="button"
-                                disabled={opIncidents.length === 0}
-                                onClick={() => opIncidents[0] && handleDelete(opIncidents[0])}
-                                className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors ${
-                                  opIncidents.length > 0
-                                    ? 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 cursor-pointer'
-                                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                                }`}
-                                title={`Hapus Kasus Terakhir untuk ${op.name}`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Hapus</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })()}
+                          <button
+                            type="button"
+                            disabled={opIncidents.length === 0}
+                            onClick={() => opIncidents[0] && handleDelete(opIncidents[0])}
+                            className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors ${
+                              opIncidents.length > 0
+                                ? 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 cursor-pointer'
+                                : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                            }`}
+                            title={`Hapus Kasus Terakhir untuk ${op.name}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Hapus</span>
+                          </button>
+                        </div>
+                      </div>
 
                     </div>
                   );

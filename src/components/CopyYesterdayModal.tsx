@@ -18,8 +18,6 @@ export const CopyYesterdayModal: React.FC<CopyYesterdayModalProps> = ({
   materials,
   onConfirmCopy,
 }) => {
-  if (!isOpen) return null;
-
   // Calculate default next date (current reportDate + 1 day)
   const getNextDayString = (dateStr: string) => {
     try {
@@ -50,6 +48,8 @@ export const CopyYesterdayModal: React.FC<CopyYesterdayModalProps> = ({
     setIsConfirming(false);
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
